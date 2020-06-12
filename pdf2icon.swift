@@ -92,7 +92,7 @@ for (name, dimensions, scales) in outputSizes {
 		
 		let dimensionString = Int(round(dimensions)) == Int(dimensions) ? String(Int(dimensions)) : String(format: "%.01f", dimensions)
 		
-		let fileName = "\(name)@\(Int(scale))x-\(dimensionString).png"
+		let fileName = "\(name)-\(dimensionString)@\(Int(scale))x.png"
 		let outputUrl = outputDir.appendingPathComponent(fileName)
 		do {
 			try data.write(to: outputUrl)
