@@ -32,7 +32,7 @@ let outputSizes:[(String, CGFloat, [CGFloat])] = [
 	("iPhone-Notification", 20, [2, 3]),
 	("iPhone-Settings", 29, [1, 2, 3]),
 	("iPhone-Spotlight", 40, [2, 3]),
-	("iPhone-App", 57, [2, 3]),
+	("iPhone-App", 57, [1, 2]),
 	("iPhone-App", 60, [2, 3]),
 
 	// iPad
