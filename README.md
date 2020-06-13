@@ -10,7 +10,7 @@ First, make the script executable:
 `chmod +x pdf2icon.swift`
 
 Next:
-`./pdf2icon.swift path-to-pdf-file.pdf /Users/someuser/Desktop/path-to-output-directory`
+`./pdf2icon.swift path-to-pdf-file.pdf [optional-overlay-pdf-file.pdf] /Users/someuser/Desktop/path-to-output-directory-xcasset`
 
 # What if I want more dimensions?
 
