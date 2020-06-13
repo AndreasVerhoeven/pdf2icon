@@ -11,20 +11,44 @@ import Foundation
 import AppKit
 
 guard CommandLine.arguments.count >= 3 else {
-	print("Usage: \(CommandLine.arguments[0]) icon [overlay] output\n")
+	print("Usage: \(CommandLine.arguments[0]) icon -overlay=overlay -assetName=AssetName output")
 	exit(-1)
 }
 
-let iconPath = URL(fileURLWithPath:CommandLine.arguments[1])
+
+var iconPath: URL!
+var outputDir: URL!
 var overlayPath: URL? = nil
-if CommandLine.arguments.count > 3 {
-	overlayPath = URL(fileURLWithPath: CommandLine.arguments[2])
+var assetName = "AppIcon"
+
+for index in 0..<CommandLine.arguments.count {
+	let argument = CommandLine.arguments[index]
+	if index == 0 {
+		continue
+	}
+	else if index == 1 {
+		iconPath = URL(fileURLWithPath: argument)
+	} else if index == CommandLine.arguments.count - 1 {
+		outputDir = URL(fileURLWithPath:argument + (argument.hasSuffix(".xcassets") == false ? ".xcassets" : ""), isDirectory: true)
+	} else {
+		let parts = argument.components(separatedBy: "=")
+		if parts.count != 2 {
+			print("Unrecognized parameter: \(argument)")
+			exit(-1)
+		}
+		switch parts[0].lowercased() {
+			case "-overlay": overlayPath = URL(fileURLWithPath: parts[1])
+			case "-assetname": assetName = parts[1]
+			default:
+				print("Unrecognized parameter: \(argument)")
+				exit(-1)
+		}
+	}
 }
-let outputDir = URL(fileURLWithPath:CommandLine.arguments.last! + ".xcasset", isDirectory: true)
-let appIconSetDir = outputDir.appendingPathComponent("AppIcon.appiconset")
+let appIconSetDir = outputDir.appendingPathComponent(assetName + (assetName.hasSuffix(".appiconset") == false ? ".appiconset" : ""))
 
 guard let data = try? Data(contentsOf: iconPath), let pdf = NSPDFImageRep(data: data) else {
-	print("Could not load icon\n")
+	print("Could not load icon")
 	exit(-1)
 }
 
