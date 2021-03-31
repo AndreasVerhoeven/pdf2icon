@@ -11,7 +11,7 @@ import Foundation
 import AppKit
 
 guard CommandLine.arguments.count >= 3 else {
-	print("Usage: \(CommandLine.arguments[0]) icon -overlay=overlay -assetName=AssetName output")
+	print("Usage: \(CommandLine.arguments[0]) icon [-overlay=overlay] [-assetName=AssetName] [-keepalpha] output")
 	exit(-1)
 }
 
@@ -20,6 +20,7 @@ var iconPath: URL!
 var outputDir: URL!
 var overlayPath: URL? = nil
 var assetName = "AppIcon"
+var removeAlphaChannel = true
 
 for index in 0..<CommandLine.arguments.count {
 	let argument = CommandLine.arguments[index]
@@ -39,6 +40,8 @@ for index in 0..<CommandLine.arguments.count {
 		switch parts[0].lowercased() {
 			case "-overlay": overlayPath = URL(fileURLWithPath: parts[1])
 			case "-assetname": assetName = parts[1]
+			case "-keepalpha": removeAlphaChannel = false
+			case "-removealpha": removeAlphaChannel = true
 			default:
 				print("Unrecognized parameter: \(argument)")
 				exit(-1)
@@ -201,7 +204,7 @@ for icon in icons {
 	for scale in icon.scales {
 		let pixelsWide = Int(round(icon.size * scale))
 		let pixelsHigh = Int(round(icon.size * scale))
-		guard let bitmap = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: pixelsWide, pixelsHigh: pixelsHigh, bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: NSColorSpaceName.deviceRGB, bytesPerRow: 4 * pixelsWide, bitsPerPixel: 32) else {
+		guard var bitmap = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: pixelsWide, pixelsHigh: pixelsHigh, bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: NSColorSpaceName.deviceRGB, bytesPerRow: 4 * pixelsWide, bitsPerPixel: 32) else {
 			print("Could not create bitmap\n")
 			exit(-1)
 		}
@@ -213,6 +216,40 @@ for icon in icons {
 		let rect = NSRect(x: 0, y: 0, width: pixelsWide, height: pixelsHigh)
 		pdf.draw(in: rect)
 		overlayPdf?.draw(in: rect)
+
+		if removeAlphaChannel == true {
+			// Remove the alpha channel, otherwise AppStoreConnect doesn't like it
+
+			let opaqueBitmapInfo = CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipLast.rawValue).union(CGBitmapInfo.byteOrder32Little)
+			guard let opaqueBitmapContext = CGContext.init(data: nil, width: pixelsWide, height: pixelsHigh, bitsPerComponent:8, bytesPerRow: 4 * pixelsWide, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: opaqueBitmapInfo.rawValue) else {
+				print("Could not create bitmap\n")
+				exit(-1)
+			}
+
+			guard let cgImage = bitmap.cgImage else {
+				print("Could not get image from bitmap\n")
+				exit(-1)
+			}
+
+			opaqueBitmapContext.draw(cgImage, in: CGRect(x: 0, y: 0, width: pixelsWide, height: pixelsHigh))
+			guard let decompressedImageRef = opaqueBitmapContext.makeImage() else {
+				print("Could not convert bitmap to cgImage\n")
+				exit(-1)
+			}
+
+			let finalImage = NSImage(cgImage: decompressedImageRef, size: NSZeroSize)
+			guard let tiffRepresentation = finalImage.tiffRepresentation else {
+				print("Could not get tiff representation\n")
+				exit(-1)
+			}
+
+			guard let finalImageRep = NSBitmapImageRep(data: tiffRepresentation) else {
+				print("Could not get image from tiff representation\n")
+				exit(-1)
+			}
+
+			bitmap = finalImageRep
+		}
 
 		guard let data = bitmap.representation(using: NSBitmapImageRep.FileType.png, properties: [:]) else {
 			print("Could not get PDF data from bitmap\n")
